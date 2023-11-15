@@ -1,0 +1,48 @@
+version: '3.7'
+services:
+#  jenkins:
+#    image: jenkins/jenkins:lts-jdk11
+#    container_name: jenkins
+#    ports:
+#      - "8888:8080"
+#      - "50000:50000"
+#    restart: always
+
+  nifi-registry-DEV:
+    image: apache/nifi-registry:1.19.0
+    ports:
+      - "19090:19090"
+    environment:
+      - NIFI_REGISTRY_WEB_HTTP_PORT=19090
+
+  nifi-registry-STG:
+    image: apache/nifi-registry:1.19.0
+    ports:
+      - "19091:19091"
+    environment:
+      - NIFI_REGISTRY_WEB_HTTP_PORT=19091
+
+
+  nifi-DEV:
+    image: apache/nifi:1.19.0
+    container_name: nifi-DEV
+    ports:
+      - "8082:8082"
+      - "8445:8443"
+      - "10002:10000"
+      - "8002:8000"
+      - "8183:8181"
+    environment:
+      - NIFI_WEB_HTTP_PORT=8082
+
+  nifi-STG:
+    image: apache/nifi:1.19.0
+    container_name: nifi-STG
+    ports:
+      - "8083:8083"
+      - "8446:8444"
+      - "10003:10001"
+      - "8003:8001"
+      - "8184:8182"
+    environment:
+      - NIFI_WEB_HTTP_PORT=8083

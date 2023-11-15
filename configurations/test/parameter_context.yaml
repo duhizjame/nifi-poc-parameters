@@ -1,0 +1,12 @@
+name: TestProcessGroupParameterContext
+inherits: Core
+values:
+  - name: testValue
+    value: value1
+    isControllerService: false
+  - name: AvroReaderPGLevel
+    value: d040203c-018b-1000-239a-13d7f197ba3b
+    isControllerService: true
+  - name: AvroWriterPGLevel
+    value: d0401235-018b-1000-7508-b7eaa58a5f67
+    isControllerService: true

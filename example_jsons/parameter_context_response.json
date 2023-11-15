@@ -1,0 +1,44 @@
+{
+  "parameterContexts": [
+    {
+      "revision": {
+        "version": 0
+      },
+      "id": "ceb4c4b5-018b-1000-44cc-a5e0fd559a6d",
+      "permissions": {
+        "canRead": true,
+        "canWrite": true
+      },
+      "component": {
+        "name": "testParameterContext",
+        "parameters": [
+          {
+            "canWrite": true,
+            "parameter": {
+              "name": "testParameter",
+              "sensitive": false,
+              "value": "testValue",
+              "provided": false,
+              "referencingComponents": [],
+              "parameterContext": {
+                "id": "ceb4c4b5-018b-1000-44cc-a5e0fd559a6d",
+                "permissions": {
+                  "canRead": true,
+                  "canWrite": true
+                },
+                "component": {
+                  "id": "ceb4c4b5-018b-1000-44cc-a5e0fd559a6d",
+                  "name": "testParameterContext"
+                }
+              }
+            }
+          }
+        ],
+        "boundProcessGroups": [],
+        "inheritedParameterContexts": [],
+        "id": "ceb4c4b5-018b-1000-44cc-a5e0fd559a6d"
+      }
+    }
+  ],
+  "currentTime": "17:58:07 CET"
+}
