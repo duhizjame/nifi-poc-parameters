@@ -3,4 +3,4 @@ inherits: Core
 values:
     testValue: {value: value1}
     Socket Read Timeout: {value: 15 sec}
-    hdfsBasePath: {value: path1}
+    hdfsBasePath: {value: path2}

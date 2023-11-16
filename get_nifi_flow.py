@@ -13,17 +13,23 @@ import time
 from yaml import Loader, Dumper
 
 def create_or_update_parameter_context(ctx: VersionedParameterContext):
-    import yaml
-    conf = yaml.safe_load("""
-name: TestProcessGroupParameterContext
-inherits: Core
-values:
-    testValue: {value: value1}
-    Socket Read Timeout: {value: 15 sec}
-    hdfsBasePath: {value: path1}
-""")
 
-    print(ctx)
+    import yaml
+    with open("./configurations/test/parameter_context.yaml", "r") as stream:
+        try:
+            conf = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+
+#     conf = yaml.safe_load("""
+# name: TestProcessGroupParameterContext
+# inherits: Core
+# values:
+#     testValue: {value: value1}
+#     Socket Read Timeout: {value: 15 sec}
+#     hdfsBasePath: {value: path1}
+# """)
+
     params = ctx.parameters
     param: VersionedParameter
     for param in params:
