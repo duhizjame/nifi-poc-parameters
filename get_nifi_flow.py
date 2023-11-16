@@ -3,30 +3,30 @@ from collections import namedtuple
 from nipyapi.registry.models.versioned_flow_snapshot import VersionedFlowSnapshot
 from nipyapi.registry.models.versioned_process_group import VersionedProcessGroup
 from nipyapi.registry.models.versioned_parameter_context import VersionedParameterContext
+from nipyapi.registry.models.versioned_flow import VersionedFlow
 from nipyapi.registry.models.versioned_parameter import VersionedParameter
+from nipyapi.nifi.models.process_group_entity import ProcessGroupEntity
+from nipyapi.nifi.models.process_group_dto import ProcessGroupDTO
+from nipyapi.nifi.models.version_control_information_dto import VersionControlInformationDTO
 import json
 import time
+from yaml import Loader, Dumper
 
 def create_or_update_parameter_context(ctx: VersionedParameterContext):
     import yaml
-
-    conf = yaml.load("""
+    conf = yaml.safe_load("""
 name: TestProcessGroupParameterContext
 inherits: Core
 values:
-- name: testValue
-    value: value1
-    isControllerService: false
-- name: AvroReaderPGLevel
-    value: d040203c-018b-1000-239a-13d7f197ba3b
-    isControllerService: true
-- name: AvroWriterPGLevel
-    value: d0401235-018b-1000-7508-b7eaa58a5f67
-    isControllerService: true
+    testValue: {value: value1}
+    Socket Read Timeout: {value: 15 sec}
+    hdfsBasePath: {value: path1}
 """)
 
+    print(ctx)
+    params = ctx.parameters
     param: VersionedParameter
-    for param in ctx.parameters:
+    for param in params:
         param.value = conf["values"][param.name]["value"]
     return ctx
 
@@ -58,22 +58,23 @@ print("connected")
 from nipyapi import versioning
 
 # define the list of Process Groups
-process_groups = [ "MyProcessGroup" ]
+process_groups = [ "MyProcessGroup2" ]
 
 # store exported flows
 exported_flows = {}
-ExportedFlow = namedtuple("ExportedFlow", ["name", "bucket_name", "definition"])
+ExportedFlow = namedtuple("ExportedFlow", ["name", "bucket_name", "definition", "version"])
 
 for pgn in process_groups:
     # make sure there's a Process Group on the Canvas
-    pg = nipyapi.canvas.get_process_group(pgn, greedy=False)
+    pg: ProcessGroupEntity  = nipyapi.canvas.get_process_group(pgn, greedy=False)
     
     if pg is None:
         print(F"process group {pgn} was not found in the Nifi Canvas")
         exit(1)
   
+    component: ProcessGroupDTO = pg.component
     # make sure the process group is in the Registry
-    if pg.component.version_control_information is None:
+    if component.version_control_information is None:
         print(F"process group {pgn} is not added to version control")
         exit(1)
   
@@ -87,18 +88,21 @@ for pgn in process_groups:
     
     # since we are here, we found no issue with this Process Group
     # let's export it
-  
-    bucket_id = pg.component.version_control_information.bucket_id
-    bucket_name = pg.component.version_control_information.bucket_name
-    flow_id = pg.component.version_control_information.flow_id
-    flow_name = pg.component.version_control_information.flow_name
 
-    print(F"Found flow: {flow_name} with id: {flow_id} under bucket: {bucket_name} with id: {bucket_id}")
+    version_control_information: VersionControlInformationDTO  = component.version_control_information
+  
+    bucket_id = version_control_information.bucket_id
+    bucket_name = version_control_information.bucket_name
+    flow_id = version_control_information.flow_id
+    flow_name = version_control_information.flow_name
+    version = version_control_information.version
+
+    print(F"Found flow: {flow_name} with id: {flow_id} and version: {version} under bucket: {bucket_name} with id: {bucket_id}")
 
     # export the latest version from the Registry
     flow_json = versioning.get_flow_version(bucket_id, flow_id, version=None)
     
-    exported_flows[pgn] = ExportedFlow(pgn, bucket_name, flow_json)
+    exported_flows[pgn] = ExportedFlow(pgn, bucket_name, flow_json, version)
 
 # connect to Nifi
 nipyapi.utils.set_endpoint("http://localhost:8083/nifi-api")
@@ -182,26 +186,35 @@ root_pg = nipyapi.canvas.get_root_pg_id()
 for flow_name, exported_flow in exported_flows.items():
 
     flow: VersionedFlowSnapshot = exported_flow.definition
+    version = exported_flow.version
 
     # get the bucket details
     bucket = versioning.get_registry_bucket(exported_flow.bucket_name)
     bucket_identifier = bucket.identifier
 
+    existing_flow: VersionedFlow = versioning.get_flow_in_bucket(bucket_identifier, flow_name)
+    # if version == existing_flow.version_count:
+    #     print("Same version of flow on dev and test -> skipping deployment!")
+    #     exit(0)
     # remove from top level Process Group
     if flow.parameter_contexts is not None:
-        param_ctx = flow.parameter_contexts
-        flow.parameter_contexts = None
-        flow_contents: VersionedProcessGroup = flow.flow_contents
-        if flow_contents.parameter_context_name is not None:
-            flow_contents.parameter_context_name = None
-        # additionally, sanitize inner Process Groups
-        process_groups: list[VersionedProcessGroup] = flow_contents.process_groups
-        for pg in process_groups:
-            sanitize_pg(pg)
-        flow_contents.process_groups = process_groups
-        flow.flow_contents = flow_contents
-    
+        param_ctxs = flow.parameter_contexts
+        param_ctx: VersionedParameterContext
+        for param_ctx in param_ctxs:
+            new_ctx = create_or_update_parameter_context(param_ctxs[param_ctx])
+            print(new_ctx)
 
+        flow.parameter_contexts = param_ctxs
+        flow_contents: VersionedProcessGroup = flow.flow_contents
+        # if flow_contents.parameter_context_name is not None:
+        #     flow_contents.parameter_context_name = None
+        # additionally, sanitize inner Process Groups
+        # process_groups: list[VersionedProcessGroup] = flow_contents.process_groups
+        # for pg in process_groups:
+            # sanitize_pg(pg)
+        # flow_contents.process_groups = process_groups
+        # flow.flow_contents = flow_contents
+    
     # json_sanitized_flow = json.dumps(flow)
     sanitized_flow_def = nipyapi.utils.dump(flow) #load(json_sanitized_flow)
 
